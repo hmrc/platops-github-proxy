@@ -1,3 +1,3 @@
 # microservice specific routes
-
-GET        /hello-world             uk.gov.hmrc.platopsgithubproxy.controllers.MicroserviceHelloWorldController.hello
+GET        /github-raw/:repoName/*path   uk.gov.hmrc.platopsgithubproxy.controllers.GitHubProxyController.githubRawUrl(repoName: String, path: String)
+GET        /github-rest/:repoName/*path  uk.gov.hmrc.platopsgithubproxy.controllers.GitHubProxyController.githubRestUrl(repoName: String, path: String)

@@ -16,12 +16,13 @@
 
 package uk.gov.hmrc.platopsgithubproxy.config
 
-import com.google.inject.AbstractModule
+import play.api.Configuration
 
-class Module extends AbstractModule {
+import javax.inject.{Inject, Singleton}
 
-  override def configure(): Unit = {
-
-    bind(classOf[AppConfig]).asEagerSingleton()
-  }
+@Singleton
+class GitHubConfig @Inject()(configuration: Configuration) {
+  val restUrl: String     = configuration.get[String]("github.rest.api.url")
+  val rawUrl: String      = configuration.get[String]("github.open.api.rawurl")
+  val githubToken: String = configuration.get[String]("github.open.api.token")
 }
