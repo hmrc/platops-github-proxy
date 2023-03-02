@@ -17,7 +17,7 @@
 package uk.gov.hmrc.platopsgithubproxy.controllers
 
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
-import uk.gov.hmrc.platopsgithubproxy.service.GitHubProxyService
+import uk.gov.hmrc.platopsgithubproxy.connector.GitHubConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
@@ -26,14 +26,14 @@ import scala.concurrent.ExecutionContext
 @Singleton
 class GitHubProxyController @Inject()(
   cc                : ControllerComponents,
-  gitHubProxyService: GitHubProxyService,
+  gitHubgitHubConnector: GitHubConnector,
 ) ( implicit ec: ExecutionContext)
     extends BackendController(cc) {
 
   def githubRawUrl(repoName: String, path: String): Action[AnyContent] =
     Action.async { implicit request =>
       for {
-        response <- gitHubProxyService.gitHubRaw(repoName, path, request.queryString)
+        response <- gitHubgitHubConnector.getGithubRawContent(repoName, path, request.queryString)
       } yield response match {
         case Right(value)                           => Ok(value.body)
         case Left(value) if value.statusCode == 404 => NotFound
@@ -44,7 +44,7 @@ class GitHubProxyController @Inject()(
   def githubRestUrl(repoName: String, path: String): Action[AnyContent] =
     Action.async { implicit request =>
       for {
-        response <- gitHubProxyService.gitHubRest(repoName, path, request.queryString)
+        response <- gitHubgitHubConnector.getGithubRestContent(repoName, path, request.queryString)
       } yield response match {
         case Right(value)                           => Ok(value.body)
         case Left(value) if value.statusCode == 404 => NotFound
