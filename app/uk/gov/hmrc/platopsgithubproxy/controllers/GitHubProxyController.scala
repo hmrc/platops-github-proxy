@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.platopsgithubproxy.controllers
 
+import play.api.Logging
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.platopsgithubproxy.connector.GitHubConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -28,7 +29,9 @@ class GitHubProxyController @Inject()(
   cc                : ControllerComponents,
   gitHubgitHubConnector: GitHubConnector,
 ) ( implicit ec: ExecutionContext)
-    extends BackendController(cc) {
+    extends BackendController(cc)
+    with Logging {
+
 
   def githubRawUrl(repoName: String, path: String): Action[AnyContent] =
     Action.async { implicit request =>
@@ -36,8 +39,12 @@ class GitHubProxyController @Inject()(
         response <- gitHubgitHubConnector.getGithubRawContent(repoName, path, request.queryString)
       } yield response match {
         case Right(value)                           => Ok(value.body)
-        case Left(value) if value.statusCode == 404 => NotFound
-        case Left(_)                                => InternalServerError
+        case Left(value) if value.statusCode == 404 =>
+          logger.info(s"github-raw of $repoName with path $path returned ${value.statusCode}")
+          NotFound
+        case Left(value)                            =>
+          logger.error(s"github-raw of $repoName with path $path returned ${value.statusCode}: ${value.message}")
+          InternalServerError
       }
     }
 
@@ -47,8 +54,12 @@ class GitHubProxyController @Inject()(
         response <- gitHubgitHubConnector.getGithubRestContent(repoName, path, request.queryString)
       } yield response match {
         case Right(value)                           => Ok(value.body)
-        case Left(value) if value.statusCode == 404 => NotFound
-        case Left(_)                                => InternalServerError
+        case Left(value) if value.statusCode == 404 =>
+          logger.info(s"github-rest of $repoName with path $path returned ${value.statusCode}")
+          NotFound
+        case Left(value)                            =>
+          logger.error(s"github-rest of $repoName with path $path returned ${value.statusCode}: ${value.message}")
+          InternalServerError
       }
     }
 }
