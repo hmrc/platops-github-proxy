@@ -21,7 +21,7 @@ import org.scalatest.concurrent.ScalaFutures.convertScalaFuture
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.Configuration
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{HeaderCarrier, StringContextOps}
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
 import uk.gov.hmrc.platopsgithubproxy.config.GitHubConfig
 
@@ -138,6 +138,12 @@ class GitHubConnectorSpec extends AnyWordSpec with Matchers with WireMockSupport
     "extract no params when map is empty" in {
       val queryParams = Map.empty[String, Seq[String]]
       GitHubConnector.extractQueryParams(queryParams) shouldBe Map.empty
+    }
+
+    "comma separated query params aren't encoded" in {
+      val queryParams = GitHubConnector.extractQueryParams(Map("pulls" -> Seq("open", "closed")))
+      url"http://localhost/x?$queryParams".toString shouldBe "http://localhost/x?pulls=open,closed"
+
     }
   }
 

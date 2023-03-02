@@ -54,5 +54,5 @@ class GitHubConnector @Inject()(
 
 object GitHubConnector {
   def extractQueryParams(queryMap: Map[String, Seq[String]]): Map[String, String] =
-    queryMap.map(entry => (entry._1, entry._2.mkString(",")))
+    queryMap.view.mapValues(_.mkString(",")).toMap
 }
