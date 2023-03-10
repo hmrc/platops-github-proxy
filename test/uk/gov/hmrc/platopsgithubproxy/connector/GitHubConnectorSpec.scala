@@ -21,7 +21,7 @@ import org.scalatest.concurrent.ScalaFutures.convertScalaFuture
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.Configuration
-import uk.gov.hmrc.http.{HeaderCarrier, StringContextOps}
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
 import uk.gov.hmrc.platopsgithubproxy.config.GitHubConfig
 
@@ -58,6 +58,45 @@ class GitHubConnectorSpec extends AnyWordSpec with Matchers with WireMockSupport
       response.isRight shouldBe true
       response.map(_.body) shouldBe Right("Hello World")
       response.map(_.status) shouldBe Right(200)
+    }
+
+    "return 200 with response body when path is more than 1 level deep" in {
+      stubFor(
+        get(urlEqualTo("/hmrc/service-one/test/deeper/path?query=test"))
+          .willReturn(aResponse().withStatus(200).withBody("Hello World"))
+      )
+
+      val response = githubConnector
+        .getGithubRawContent("service-one", "test/deeper/path", Map("query" -> Seq("test")))
+        .futureValue
+
+      response.isRight shouldBe true
+    }
+
+    "return 200 when query param has multiple values" in {
+      stubFor(
+        get(urlEqualTo("/hmrc/service-one/test?pulls=open,closed"))
+          .willReturn(aResponse().withStatus(200).withBody("Hello World"))
+      )
+
+      val response = githubConnector
+        .getGithubRawContent("service-one", "test", Map("pulls" -> Seq("open", "closed")))
+        .futureValue
+
+      response.isRight shouldBe true
+    }
+
+    "return 200 when multiple query params" in {
+      stubFor(
+        get(urlEqualTo("/hmrc/service-one/test?pulls=open,closed&test=open"))
+          .willReturn(aResponse().withStatus(200).withBody("Hello World"))
+      )
+
+      val response = githubConnector
+        .getGithubRawContent("service-one", "test", Map("pulls" -> Seq("open", "closed"), "test" -> Seq("open")))
+        .futureValue
+
+      response.isRight shouldBe true
     }
 
     "return 404 when url not found in GitHub" in {
@@ -115,35 +154,6 @@ class GitHubConnectorSpec extends AnyWordSpec with Matchers with WireMockSupport
         .futureValue
 
       response.isLeft shouldBe true
-    }
-  }
-
-  "extractQueryParams" should {
-
-    "extract params with single key and value" in {
-      val queryParams = Map("pulls" -> Seq("open"))
-      GitHubConnector.extractQueryParams(queryParams) shouldBe Map("pulls" -> "open")
-    }
-
-    "extract params with single key and multiple values" in {
-      val queryParams = Map("pulls" -> Seq("open", "closed"))
-      GitHubConnector.extractQueryParams(queryParams) shouldBe Map("pulls" -> "open,closed")
-    }
-
-    "extract params with multiple keys and multiple values" in {
-      val queryParams = Map("pulls" -> Seq("open", "closed"), "test" -> Seq("open"))
-      GitHubConnector.extractQueryParams(queryParams) shouldBe Map("pulls" -> "open,closed", "test" -> "open")
-    }
-
-    "extract no params when map is empty" in {
-      val queryParams = Map.empty[String, Seq[String]]
-      GitHubConnector.extractQueryParams(queryParams) shouldBe Map.empty
-    }
-
-    "comma separated query params aren't encoded" in {
-      val queryParams = GitHubConnector.extractQueryParams(Map("pulls" -> Seq("open", "closed")))
-      url"http://localhost/x?$queryParams".toString shouldBe "http://localhost/x?pulls=open,closed"
-
     }
   }
 
