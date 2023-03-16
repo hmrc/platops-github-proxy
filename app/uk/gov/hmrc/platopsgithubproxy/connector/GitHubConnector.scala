@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.platopsgithubproxy.connector
 
-import play.api.Logger
 import play.api.libs.functional.syntax.toFunctionalBuilderOps
 import play.api.libs.json.{Reads, __}
 import uk.gov.hmrc.http.HttpReads.Implicits._
@@ -65,9 +64,7 @@ class GitHubConnector @Inject()(
           .mkString("&")
   }
 
-  private implicit val hc = HeaderCarrier()
-
-  def getRateLimitMetrics(token: String, resource: RateLimitMetrics.Resource): Future[RateLimitMetrics] = {
+  def getRateLimitMetrics(token: String, resource: RateLimitMetrics.Resource)(implicit hc: HeaderCarrier): Future[RateLimitMetrics] = {
     implicit val rlmr = RateLimitMetrics.reads(resource)
     httpClientV2
       .get(url"${githubConfig.restUrl}/rate_limit")
@@ -101,27 +98,4 @@ object RateLimitMetrics {
         ~ (__ \ "reset"    ).read[Int]
         )(RateLimitMetrics.apply _)
     )
-}
-
-case class ApiRateLimitExceededException(
-  exception: Throwable
-) extends RuntimeException(exception)
-
-case class ApiAbuseDetectedException(
-  exception: Throwable
-) extends RuntimeException(exception)
-
-object RateLimit {
-  val logger: Logger = Logger(getClass)
-
-  def convertRateLimitErrors[A]: PartialFunction[Throwable, Future[A]] = {
-    case e if e.getMessage.toLowerCase.contains("api rate limit exceeded")
-      || e.getMessage.toLowerCase.contains("have exceeded a secondary rate limit") =>
-      logger.error("=== Api rate limit has been reached ===", e)
-      Future.failed(ApiRateLimitExceededException(e))
-
-    case e if e.getMessage.toLowerCase.contains("triggered an abuse detection mechanism") =>
-      logger.error("=== Api abuse detected ===", e)
-      Future.failed(ApiAbuseDetectedException(e))
-  }
 }
