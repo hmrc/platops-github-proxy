@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.platopsgithubproxy.connector
 
-import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, get, stubFor, urlEqualTo}
+import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, equalTo, get, getRequestedFor, stubFor, urlEqualTo, urlPathEqualTo}
 import org.scalatest.concurrent.ScalaFutures.convertScalaFuture
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -35,9 +35,11 @@ class GitHubConnectorSpec extends AnyWordSpec with Matchers with WireMockSupport
     new GitHubConnector(
       httpClientV2 = httpClientV2,
       githubConfig = new GitHubConfig(Configuration(
-        "github.rest.api.url"    -> wireMockUrl,
-        "github.open.api.rawurl" -> wireMockUrl,
-        "github.open.api.token"  -> testToken
+        "github.rest.api.url"      -> wireMockUrl,
+        "github.open.api.rawurl"   -> wireMockUrl,
+        "github.open.api.token"    -> testToken,
+        "ratemetrics.githubtokens" -> List(),
+        "metrics.jvm"              -> false
       ))
     )
 
@@ -157,4 +159,97 @@ class GitHubConnectorSpec extends AnyWordSpec with Matchers with WireMockSupport
     }
   }
 
+  "getRateLimitMetrics" should {
+
+    "return rate limit metrics" in {
+      stubFor(
+        get(urlPathEqualTo("/rate_limit"))
+          .willReturn(
+            aResponse()
+              .withBody(
+                """
+                  {
+                    "resources": {
+                      "core": {
+                        "limit": 100,
+                        "used": 0,
+                        "remaining": 100,
+                        "reset": 1644407813
+                      },
+                      "search": {
+                        "limit": 30,
+                        "used": 0,
+                        "remaining": 30,
+                        "reset": 1644404273
+                      },
+                      "graphql": {
+                        "limit": 200,
+                        "used": 0,
+                        "remaining": 200,
+                        "reset": 1644407813
+                      },
+                      "integration_manifest": {
+                        "limit": 5000,
+                        "used": 0,
+                        "remaining": 5000,
+                        "reset": 1644407813
+                      },
+                      "source_import": {
+                        "limit": 100,
+                        "used": 0,
+                        "remaining": 100,
+                        "reset": 1644404273
+                      },
+                      "code_scanning_upload": {
+                        "limit": 500,
+                        "used": 0,
+                        "remaining": 500,
+                        "reset": 1644407813
+                      },
+                      "actions_runner_registration": {
+                        "limit": 10000,
+                        "used": 0,
+                        "remaining": 10000,
+                        "reset": 1644407813
+                      },
+                      "scim": {
+                        "limit": 15000,
+                        "used": 0,
+                        "remaining": 15000,
+                        "reset": 1644407813
+                      }
+                    },
+                    "rate": {
+                      "limit": 5000,
+                      "used": 0,
+                      "remaining": 5000,
+                      "reset": 1644407813
+                    }
+                  }
+                """
+              )
+          )
+      )
+
+      import RateLimitMetrics.Resource._
+
+      githubConnector.getRateLimitMetrics(testToken, Core).futureValue shouldBe RateLimitMetrics(
+        limit = 100,
+        remaining = 100,
+        reset = 1644407813
+      )
+
+      githubConnector.getRateLimitMetrics(testToken, GraphQl).futureValue shouldBe RateLimitMetrics(
+        limit = 200,
+        remaining = 200,
+        reset = 1644407813
+      )
+
+      wireMockServer.verify(
+        2,
+        getRequestedFor(urlPathEqualTo("/rate_limit"))
+          .withHeader("Authorization", equalTo(s"token $testToken"))
+      )
+    }
+  }
 }

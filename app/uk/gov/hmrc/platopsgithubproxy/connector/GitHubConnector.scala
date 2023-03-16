@@ -16,9 +16,12 @@
 
 package uk.gov.hmrc.platopsgithubproxy.connector
 
+import play.api.Logger
+import play.api.libs.functional.syntax.toFunctionalBuilderOps
+import play.api.libs.json.{Reads, __}
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, UpstreamErrorResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.platopsgithubproxy.config.GitHubConfig
 
 import java.net.URL
@@ -30,6 +33,7 @@ class GitHubConnector @Inject()(
   httpClientV2: HttpClientV2,
   githubConfig: GitHubConfig
 )(implicit ec: ExecutionContext) {
+
 
   def getGithubRawContent(repoName: String, path: String, queryMap: Map[String, Seq[String]])
                          (implicit hc: HeaderCarrier): Future[Either[UpstreamErrorResponse, HttpResponse]] = {
@@ -43,7 +47,8 @@ class GitHubConnector @Inject()(
     getFromGithub(baseUrl, repoName, path, queryMap)
   }
 
-  private def getFromGithub(baseUrl: String, repoName: String, path: String, queryMap: Map[String, Seq[String]])(implicit hc: HeaderCarrier) = {
+  private def getFromGithub(baseUrl: String, repoName: String, path: String, queryMap: Map[String, Seq[String]])
+                           (implicit hc: HeaderCarrier): Future[Either[UpstreamErrorResponse, HttpResponse]] = {
     val url = s"$baseUrl/$repoName/$path${extractQueryParams(queryMap)}"
     httpClientV2
       .get(new URL(url))
@@ -58,5 +63,65 @@ class GitHubConnector @Inject()(
         queryMap
           .map(entry => entry._1 + "=" + entry._2.mkString(","))
           .mkString("&")
+  }
+
+  private implicit val hc = HeaderCarrier()
+
+  def getRateLimitMetrics(token: String, resource: RateLimitMetrics.Resource): Future[RateLimitMetrics] = {
+    implicit val rlmr = RateLimitMetrics.reads(resource)
+    httpClientV2
+      .get(url"${githubConfig.restUrl}/rate_limit")
+      .setHeader("Authorization" -> s"token $token")
+      .withProxy
+      .execute[RateLimitMetrics]
+  }
+}
+
+case class RateLimitMetrics(
+  limit    : Int,
+  remaining: Int,
+  reset    : Int
+)
+
+object RateLimitMetrics {
+
+  sealed trait Resource {
+    def asString: String
+  }
+
+  object Resource {
+    final case object Core extends Resource { val asString = "core" }
+    final case object GraphQl extends Resource { val asString = "graphql" }
+  }
+
+  def reads(resource: Resource): Reads[RateLimitMetrics] =
+    Reads.at(__ \ "resources" \ resource.asString)(
+      ( (__ \ "limit"    ).read[Int]
+        ~ (__ \ "remaining").read[Int]
+        ~ (__ \ "reset"    ).read[Int]
+        )(RateLimitMetrics.apply _)
+    )
+}
+
+case class ApiRateLimitExceededException(
+  exception: Throwable
+) extends RuntimeException(exception)
+
+case class ApiAbuseDetectedException(
+  exception: Throwable
+) extends RuntimeException(exception)
+
+object RateLimit {
+  val logger: Logger = Logger(getClass)
+
+  def convertRateLimitErrors[A]: PartialFunction[Throwable, Future[A]] = {
+    case e if e.getMessage.toLowerCase.contains("api rate limit exceeded")
+      || e.getMessage.toLowerCase.contains("have exceeded a secondary rate limit") =>
+      logger.error("=== Api rate limit has been reached ===", e)
+      Future.failed(ApiRateLimitExceededException(e))
+
+    case e if e.getMessage.toLowerCase.contains("triggered an abuse detection mechanism") =>
+      logger.error("=== Api abuse detected ===", e)
+      Future.failed(ApiAbuseDetectedException(e))
   }
 }
