@@ -58,7 +58,7 @@ class GitHubRateLimitMetricsScheduler @Inject()(
     gitHubConfig.tokens
       .flatMap { case (username, token) =>
         List(
-          s"github.token.$username.api.rate.remaining" -> { () =>
+          s"github.token.$username.core.rate.remaining" -> { () =>
             gitHubConnector.getRateLimitMetrics(token, Core).map(_.remaining)
           },
           s"github.token.$username.graphql.rate.remaining" -> { () =>
