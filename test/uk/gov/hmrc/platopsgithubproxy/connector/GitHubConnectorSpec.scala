@@ -17,7 +17,7 @@
 package uk.gov.hmrc.platopsgithubproxy.connector
 
 import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, equalTo, get, getRequestedFor, stubFor, urlEqualTo, urlPathEqualTo}
-import org.scalatest.concurrent.ScalaFutures.convertScalaFuture
+import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.Configuration
@@ -27,7 +27,13 @@ import uk.gov.hmrc.platopsgithubproxy.config.GitHubConfig
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class GitHubConnectorSpec extends AnyWordSpec with Matchers with WireMockSupport with HttpClientV2Support {
+class GitHubConnectorSpec
+  extends AnyWordSpec
+     with Matchers
+     with WireMockSupport
+     with HttpClientV2Support
+     with ScalaFutures
+     with IntegrationPatience {
 
   private val testToken = "test-token"
 
