@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.platopsgithubproxy.scheduler
 
-import akka.actor.ActorSystem
 import cats.implicits._
-import com.kenshoo.play.metrics.Metrics
+import com.codahale.metrics.MetricRegistry
+import org.apache.pekko.actor.ActorSystem
 import play.api.inject.ApplicationLifecycle
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.MongoComponent
@@ -40,7 +40,7 @@ class GitHubRateLimitMetricsScheduler @Inject()(
   schedulerConfig: SchedulerConfigs,
   gitHubConfig   : GitHubConfig,
   mongoLock      : MongoLockRepository,
-  metrics        : Metrics,
+  metrics        : MetricRegistry,
   mongoComponent : MongoComponent
 )(implicit
   actorSystem         : ActorSystem,
@@ -78,7 +78,7 @@ class GitHubRateLimitMetricsScheduler @Inject()(
     metricSources    = List(source),
     lockService      = metrixLock,
     metricRepository = new MongoMetricRepository(mongoComponent),
-    metricRegistry   = metrics.defaultRegistry
+    metricRegistry   = metrics
   )
 
   schedule("Github Ratelimit metrics", schedulerConfig.metrixScheduler) {
