@@ -1,7 +1,7 @@
 
 # platops-github-proxy
 
-This is a placeholder README.md for a new repository
+Service that acts as a proxy between Github and Platops' services.
 
 ### License
 
