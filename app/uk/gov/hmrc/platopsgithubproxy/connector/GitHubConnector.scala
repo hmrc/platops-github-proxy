@@ -31,38 +31,48 @@ import scala.concurrent.{ExecutionContext, Future}
 class GitHubConnector @Inject()(
   httpClientV2: HttpClientV2,
   githubConfig: GitHubConfig
-)(implicit ec: ExecutionContext) {
+)(implicit
+  ec          : ExecutionContext
+) {
 
+  def getGithubRawContent(
+    repoName: String,
+    path    : String,
+    queryMap: Map[String, Seq[String]]
+  )(implicit
+    hc      : HeaderCarrier
+  ): Future[Either[UpstreamErrorResponse, HttpResponse]] =
+    getFromGithub(s"${githubConfig.rawUrl}/hmrc", repoName, path, queryMap)
 
-  def getGithubRawContent(repoName: String, path: String, queryMap: Map[String, Seq[String]])
-                         (implicit hc: HeaderCarrier): Future[Either[UpstreamErrorResponse, HttpResponse]] = {
-    val baseUrl = s"${githubConfig.rawUrl}/hmrc"
-    getFromGithub(baseUrl, repoName, path, queryMap)
-  }
+  def getGithubRestContent(
+    repoName: String,
+    path    : String,
+    queryMap: Map[String, Seq[String]]
+  )(implicit
+    hc      : HeaderCarrier
+  ): Future[Either[UpstreamErrorResponse, HttpResponse]] =
+    getFromGithub(s"${githubConfig.restUrl}/repos/hmrc", repoName, path, queryMap)
 
-  def getGithubRestContent(repoName: String, path: String, queryMap: Map[String, Seq[String]])
-                          (implicit hc: HeaderCarrier): Future[Either[UpstreamErrorResponse, HttpResponse]] = {
-    val baseUrl = s"${githubConfig.restUrl}/repos/hmrc"
-    getFromGithub(baseUrl, repoName, path, queryMap)
-  }
-
-  private def getFromGithub(baseUrl: String, repoName: String, path: String, queryMap: Map[String, Seq[String]])
-                           (implicit hc: HeaderCarrier): Future[Either[UpstreamErrorResponse, HttpResponse]] = {
-    val url = s"$baseUrl/$repoName/$path${extractQueryParams(queryMap)}"
+  private def getFromGithub(
+    baseUrl : String,
+    repoName: String,
+    path    : String,
+    queryMap: Map[String, Seq[String]]
+  )(implicit
+    hc      : HeaderCarrier
+  ): Future[Either[UpstreamErrorResponse, HttpResponse]] =
     httpClientV2
-      .get(new URL(url))
+      .get(new URL(s"$baseUrl/$repoName/$path${extractQueryParams(queryMap)}")) // Not using url interpolator since it doesn't escape the query params correctly
       .setHeader("Authorization" -> s"token ${githubConfig.githubToken}")
       .withProxy
       .execute[Either[UpstreamErrorResponse, HttpResponse]]
-  }
 
-  private def extractQueryParams(queryMap: Map[String, Seq[String]]): String = {
-    if (queryMap.isEmpty) "" else
-      "?" +
-        queryMap
-          .map(entry => entry._1 + "=" + entry._2.mkString(","))
-          .mkString("&")
-  }
+  private def extractQueryParams(queryMap: Map[String, Seq[String]]): String =
+    if (queryMap.isEmpty) ""
+    else
+      queryMap
+        .map(entry => entry._1 + "=" + entry._2.mkString(","))
+        .mkString("?", "&", "")
 
   def getRateLimitMetrics(token: String, resource: RateLimitMetrics.Resource)(implicit hc: HeaderCarrier): Future[RateLimitMetrics] = {
     implicit val rlmr = RateLimitMetrics.reads(resource)
@@ -87,15 +97,15 @@ object RateLimitMetrics {
   }
 
   object Resource {
-    final case object Core extends Resource { val asString = "core" }
+    final case object Core    extends Resource { val asString = "core"    }
     final case object GraphQl extends Resource { val asString = "graphql" }
   }
 
   def reads(resource: Resource): Reads[RateLimitMetrics] =
     Reads.at(__ \ "resources" \ resource.asString)(
       ( (__ \ "limit"    ).read[Int]
-        ~ (__ \ "remaining").read[Int]
-        ~ (__ \ "reset"    ).read[Int]
-        )(RateLimitMetrics.apply _)
+      ~ (__ \ "remaining").read[Int]
+      ~ (__ \ "reset"    ).read[Int]
+      )(RateLimitMetrics.apply _)
     )
 }
