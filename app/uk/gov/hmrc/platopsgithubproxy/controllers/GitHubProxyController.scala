@@ -26,12 +26,12 @@ import scala.concurrent.ExecutionContext
 
 @Singleton
 class GitHubProxyController @Inject()(
-  cc                : ControllerComponents,
+  cc                   : ControllerComponents,
   gitHubgitHubConnector: GitHubConnector,
-) ( implicit ec: ExecutionContext)
-    extends BackendController(cc)
-    with Logging {
-
+)(implicit
+  ec                   : ExecutionContext
+) extends BackendController(cc)
+     with Logging {
 
   def githubRawUrl(repoName: String, path: String): Action[AnyContent] =
     Action.async { implicit request =>
@@ -39,12 +39,10 @@ class GitHubProxyController @Inject()(
         response <- gitHubgitHubConnector.getGithubRawContent(repoName, path, request.queryString)
       } yield response match {
         case Right(value)                           => Ok(value.body)
-        case Left(value) if value.statusCode == 404 =>
-          logger.info(s"github-raw of $repoName with path $path returned ${value.statusCode}")
-          NotFound
-        case Left(value)                            =>
-          logger.error(s"github-raw of $repoName with path $path returned ${value.statusCode}: ${value.message}")
-          InternalServerError
+        case Left(value) if value.statusCode == 404 => logger.info(s"github-raw of $repoName with path $path returned ${value.statusCode}")
+                                                       NotFound
+        case Left(value)                            => logger.error(s"github-raw of $repoName with path $path returned ${value.statusCode}: ${value.message}")
+                                                       InternalServerError
       }
     }
 
@@ -54,12 +52,10 @@ class GitHubProxyController @Inject()(
         response <- gitHubgitHubConnector.getGithubRestContent(repoName, path, request.queryString)
       } yield response match {
         case Right(value)                           => Ok(value.body)
-        case Left(value) if value.statusCode == 404 =>
-          logger.info(s"github-rest of $repoName with path $path returned ${value.statusCode}")
-          NotFound
-        case Left(value)                            =>
-          logger.error(s"github-rest of $repoName with path $path returned ${value.statusCode}: ${value.message}")
-          InternalServerError
+        case Left(value) if value.statusCode == 404 => logger.info(s"github-rest of $repoName with path $path returned ${value.statusCode}")
+                                                       NotFound
+        case Left(value)                            => logger.error(s"github-rest of $repoName with path $path returned ${value.statusCode}: ${value.message}")
+                                                       InternalServerError
       }
     }
 }

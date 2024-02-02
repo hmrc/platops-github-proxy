@@ -30,27 +30,26 @@ case class SchedulerConfig(
 
 object SchedulerConfig {
   def apply(
-        configuration  : Configuration
-      , enabledKey     : String
-      , intervalKey    : String
-      , initialDelayKey: String
-      ): SchedulerConfig =
+    configuration  : Configuration
+  , enabledKey     : String
+  , intervalKey    : String
+  , initialDelayKey: String
+  ): SchedulerConfig =
     SchedulerConfig(
-      enabledKey
+        enabledKey
       , enabled      = configuration.get[Boolean](enabledKey)
       , interval     = configuration.get[FiniteDuration](intervalKey)
       , initialDelay = configuration.get[FiniteDuration](initialDelayKey)
-    )
+      )
 }
 
 @Singleton
 class SchedulerConfigs @Inject()(configuration: Configuration){
 
   val metrixScheduler = SchedulerConfig(
-    configuration
+      configuration
     , enabledKey      = "scheduler.metrix.enabled"
     , intervalKey     = "scheduler.metrix.interval"
     , initialDelayKey = "scheduler.metrix.initialDelay"
-  )
+    )
 }
-
