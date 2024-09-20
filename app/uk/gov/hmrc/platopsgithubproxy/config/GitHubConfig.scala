@@ -23,18 +23,16 @@ import play.api.Configuration
 import scala.jdk.CollectionConverters._
 
 @Singleton
-class GitHubConfig @Inject()(configuration: Configuration) {
+class GitHubConfig @Inject()(configuration: Configuration):
   val restUrl: String     = configuration.get[String]("github.rest.api.url")
   val rawUrl: String      = configuration.get[String]("github.open.api.rawurl")
   val githubToken: String = configuration.get[String]("github.open.api.token")
 
   val tokens: List[(String, String)] =
     configuration.get[ConfigList]("ratemetrics.githubtokens").asScala.toList
-      .map(cv => new Configuration(cv.asInstanceOf[ConfigObject].toConfig))
-      .flatMap { config =>
-        for {
+      .map(cv => Configuration(cv.asInstanceOf[ConfigObject].toConfig))
+      .flatMap: config =>
+        for
           username <- config.getOptional[String]("user")
           token    <- config.getOptional[String]("token")
-        } yield (username, token)
-      }
-}
+        yield (username, token)

@@ -16,34 +16,34 @@
 
 package uk.gov.hmrc.platopsgithubproxy.config
 
-import com.typesafe.config.ConfigFactory
-import org.mockito.MockitoSugar
+import com.typesafe.config.{Config, ConfigFactory}
+import org.scalatestplus.mockito.MockitoSugar
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.Configuration
 
-class GitHubConfigSpec extends AnyWordSpec with Matchers with MockitoSugar {
+class GitHubConfigSpec extends AnyWordSpec with Matchers with MockitoSugar:
 
-  "GitHubConfig" should {
-    "parse config correctly" in {
-      val githubConfig = new GitHubConfig(Configuration(
-          "github.rest.api.url"    -> "https://api.github.com"
-        , "github.open.api.rawurl" -> "http://localhost:8461/github/raw"
-        , "github.open.api.token"  -> "token1"
-
-        , "ratemetrics.githubtokens.1.user " -> "user1"
-        , "ratemetrics.githubtokens.1.token" -> "token1"
-        , "ratemetrics.githubtokens.2.user"  -> "user2"
-        , "ratemetrics.githubtokens.2.token" -> "token2"
-      ))
+  "GitHubConfig" should:
+    "parse config correctly" in:
+      val githubConfig: GitHubConfig =
+        GitHubConfig(Configuration(
+            "github.rest.api.url"    -> "https://api.github.com"
+          , "github.open.api.rawurl" -> "http://localhost:8461/github/raw"
+          , "github.open.api.token"  -> "token1"
+  
+          , "ratemetrics.githubtokens.1.user " -> "user1"
+          , "ratemetrics.githubtokens.1.token" -> "token1"
+          , "ratemetrics.githubtokens.2.user"  -> "user2"
+          , "ratemetrics.githubtokens.2.token" -> "token2"
+        ))
 
       githubConfig.restUrl shouldBe "https://api.github.com"
       githubConfig.rawUrl shouldBe "http://localhost:8461/github/raw"
       githubConfig.tokens shouldBe List("user1" -> "token1", "user2" -> "token2")
-    }
 
-    "infer token config from open api credentials" in {
-      val config =
+    "infer token config from open api credentials" in:
+      val config: Config =
         ConfigFactory.parseString(
           f"""|
               |github.rest.api.url     = "https://api.github.com"
@@ -54,10 +54,8 @@ class GitHubConfigSpec extends AnyWordSpec with Matchers with MockitoSugar {
               |ratemetrics.githubtokens.1.token = $${?github.open.api.token}
             """.stripMargin
         ).resolve
-      val githubConfig = new GitHubConfig(new Configuration(config))
+      val githubConfig: GitHubConfig =
+        GitHubConfig(Configuration(config))
 
       githubConfig.tokens shouldBe List("user1" -> "token1")
-    }
-  }
-}
 

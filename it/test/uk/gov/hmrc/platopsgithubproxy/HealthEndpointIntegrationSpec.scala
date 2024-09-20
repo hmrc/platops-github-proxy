@@ -22,14 +22,14 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.libs.ws.WSClient
+import play.api.libs.ws.{WSClient, WSResponse}
 
 class HealthEndpointIntegrationSpec
   extends AnyWordSpec
      with Matchers
      with ScalaFutures
      with IntegrationPatience
-     with GuiceOneServerPerSuite {
+     with GuiceOneServerPerSuite:
 
   private val wsClient = app.injector.instanceOf[WSClient]
   private val baseUrl  = s"http://localhost:$port"
@@ -39,15 +39,12 @@ class HealthEndpointIntegrationSpec
       .configure("metrics.enabled" -> false)
       .build()
 
-  "service health endpoint" should {
-    "respond with 200 status" in {
-      val response =
+  "service health endpoint" should:
+    "respond with 200 status" in:
+      val response: WSResponse =
         wsClient
           .url(s"$baseUrl/ping/ping")
           .get()
           .futureValue
 
       response.status shouldBe 200
-    }
-  }
-}

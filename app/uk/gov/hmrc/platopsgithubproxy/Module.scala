@@ -19,8 +19,7 @@ package uk.gov.hmrc.platopsgithubproxy
 import com.google.inject.AbstractModule
 import uk.gov.hmrc.platopsgithubproxy.scheduler.GitHubRateLimitMetricsScheduler
 
-class Module() extends AbstractModule {
+class Module() extends AbstractModule:
   override def configure(): Unit =
     bind(classOf[GitHubRateLimitMetricsScheduler]).asEagerSingleton()
-}
 
