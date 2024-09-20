@@ -21,7 +21,7 @@ import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.Configuration
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, UpstreamErrorResponse}
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
 import uk.gov.hmrc.platopsgithubproxy.config.GitHubConfig
 
@@ -33,14 +33,14 @@ class GitHubConnectorSpec
      with WireMockSupport
      with HttpClientV2Support
      with ScalaFutures
-     with IntegrationPatience {
+     with IntegrationPatience:
 
   private val testToken = "test-token"
 
-  private lazy val githubConnector =
-    new GitHubConnector(
+  private lazy val githubConnector: GitHubConnector =
+    GitHubConnector(
       httpClientV2 = httpClientV2,
-      githubConfig = new GitHubConfig(Configuration(
+      githubConfig = GitHubConfig(Configuration(
         "github.rest.api.url"      -> wireMockUrl,
         "github.open.api.rawurl"   -> wireMockUrl,
         "github.open.api.token"    -> testToken,
@@ -49,125 +49,123 @@ class GitHubConnectorSpec
       ))
     )
 
-  implicit val headerCarrier: HeaderCarrier = HeaderCarrier()
+  given HeaderCarrier = HeaderCarrier()
 
-  "getGithubRawContent" should {
+  "getGithubRawContent" should:
 
-    "return 200 with response body" in {
+    "return 200 with response body" in:
       stubFor(
         get(urlEqualTo("/hmrc/service-one/test?query=test"))
           .willReturn(aResponse().withStatus(200).withBody("Hello World"))
       )
 
-      val response = githubConnector
-        .getGithubRawContent("service-one", "test", Map("query" -> Seq("test")))
-        .futureValue
+      val response: Either[UpstreamErrorResponse, HttpResponse] =
+        githubConnector
+          .getGithubRawContent("service-one", "test", Map("query" -> Seq("test")))
+          .futureValue
 
       response.isRight shouldBe true
       response.map(_.body) shouldBe Right("Hello World")
       response.map(_.status) shouldBe Right(200)
-    }
 
-    "return 200 with response body when path is more than 1 level deep" in {
+    "return 200 with response body when path is more than 1 level deep" in:
       stubFor(
         get(urlEqualTo("/hmrc/service-one/test/deeper/path?query=test"))
           .willReturn(aResponse().withStatus(200).withBody("Hello World"))
       )
 
-      val response = githubConnector
-        .getGithubRawContent("service-one", "test/deeper/path", Map("query" -> Seq("test")))
-        .futureValue
+      val response: Either[UpstreamErrorResponse, HttpResponse] =
+        githubConnector
+          .getGithubRawContent("service-one", "test/deeper/path", Map("query" -> Seq("test")))
+          .futureValue
 
       response.isRight shouldBe true
-    }
 
-    "return 200 when query param has multiple values" in {
+    "return 200 when query param has multiple values" in:
       stubFor(
         get(urlEqualTo("/hmrc/service-one/test?pulls=open,closed"))
           .willReturn(aResponse().withStatus(200).withBody("Hello World"))
       )
 
-      val response = githubConnector
-        .getGithubRawContent("service-one", "test", Map("pulls" -> Seq("open", "closed")))
-        .futureValue
+      val response: Either[UpstreamErrorResponse, HttpResponse] =
+        githubConnector
+          .getGithubRawContent("service-one", "test", Map("pulls" -> Seq("open", "closed")))
+          .futureValue
 
       response.isRight shouldBe true
-    }
 
-    "return 200 when multiple query params" in {
+    "return 200 when multiple query params" in:
       stubFor(
         get(urlEqualTo("/hmrc/service-one/test?pulls=open,closed&test=open"))
           .willReturn(aResponse().withStatus(200).withBody("Hello World"))
       )
 
-      val response = githubConnector
-        .getGithubRawContent("service-one", "test", Map("pulls" -> Seq("open", "closed"), "test" -> Seq("open")))
-        .futureValue
+      val response: Either[UpstreamErrorResponse, HttpResponse] =
+        githubConnector
+          .getGithubRawContent("service-one", "test", Map("pulls" -> Seq("open", "closed"), "test" -> Seq("open")))
+          .futureValue
 
       response.isRight shouldBe true
-    }
 
-    "return 404 when url not found in GitHub" in {
+    "return 404 when url not found in GitHub" in:
       stubFor(
         get(urlEqualTo("/hmrc/service-one/test?query=test"))
           .willReturn(aResponse().withStatus(404))
       )
 
-      val response = githubConnector
-        .getGithubRawContent("service-one", "test", Map("query" -> Seq("test")))
-        .futureValue
+      val response: Either[UpstreamErrorResponse, HttpResponse] =
+        githubConnector
+          .getGithubRawContent("service-one", "test", Map("query" -> Seq("test")))
+          .futureValue
 
       response.isLeft shouldBe true
-    }
-  }
 
-  "getGithubRestContent" should {
+  "getGithubRestContent" should:
 
-    "return 200 with response body" in {
+    "return 200 with response body" in:
       stubFor(
         get(urlEqualTo("/repos/hmrc/service-one/test?query=test"))
           .willReturn(aResponse().withStatus(200).withBody("Hello World"))
       )
 
-      val response = githubConnector
-        .getGithubRestContent("service-one", "test", Map("query" -> Seq("test")))
-        .futureValue
+      val response: Either[UpstreamErrorResponse, HttpResponse] =
+        githubConnector
+          .getGithubRestContent("service-one", "test", Map("query" -> Seq("test")))
+          .futureValue
 
       response.isRight shouldBe true
       response.map(_.body) shouldBe Right("Hello World")
       response.map(_.status) shouldBe Right(200)
-    }
 
-    "return 404 when url not found in GitHub" in {
+    "return 404 when url not found in GitHub" in:
       stubFor(
         get(urlEqualTo("/repos/hmrc/service-one/test?query=test"))
           .willReturn(aResponse().withStatus(404))
       )
 
-      val response = githubConnector
-        .getGithubRestContent("service-one", "test", Map("query" -> Seq("test")))
-        .futureValue
+      val response: Either[UpstreamErrorResponse, HttpResponse] =
+        githubConnector
+          .getGithubRestContent("service-one", "test", Map("query" -> Seq("test")))
+          .futureValue
 
       response.isLeft shouldBe true
-    }
 
-    "return 401 when unauthenticated" in {
+    "return 401 when unauthenticated" in:
       stubFor(
         get(urlEqualTo("/repos/hmrc/service-one/test?query=test"))
           .willReturn(aResponse().withStatus(401))
       )
 
-      val response = githubConnector
-        .getGithubRestContent("service-one", "test", Map("query" -> Seq("test")))
-        .futureValue
+      val response: Either[UpstreamErrorResponse, HttpResponse] =
+        githubConnector
+          .getGithubRestContent("service-one", "test", Map("query" -> Seq("test")))
+          .futureValue
 
       response.isLeft shouldBe true
-    }
-  }
 
-  "getRateLimitMetrics" should {
+  "getRateLimitMetrics" should:
 
-    "return rate limit metrics" in {
+    "return rate limit metrics" in:
       stubFor(
         get(urlPathEqualTo("/rate_limit"))
           .willReturn(
@@ -256,6 +254,3 @@ class GitHubConnectorSpec
         getRequestedFor(urlPathEqualTo("/rate_limit"))
           .withHeader("Authorization", equalTo(s"token $testToken"))
       )
-    }
-  }
-}

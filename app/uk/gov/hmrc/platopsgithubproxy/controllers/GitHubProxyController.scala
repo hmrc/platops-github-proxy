@@ -28,34 +28,30 @@ import scala.concurrent.ExecutionContext
 class GitHubProxyController @Inject()(
   cc                   : ControllerComponents,
   gitHubgitHubConnector: GitHubConnector,
-)(implicit
-  ec                   : ExecutionContext
+)(using ExecutionContext
 ) extends BackendController(cc)
-     with Logging {
+     with Logging:
 
   def githubRawUrl(repoName: String, path: String): Action[AnyContent] =
-    Action.async { implicit request =>
-      for {
-        response <- gitHubgitHubConnector.getGithubRawContent(repoName, path, request.queryString)
-      } yield response match {
-        case Right(value)                           => Ok(value.body)
-        case Left(value) if value.statusCode == 404 => logger.info(s"github-raw of $repoName with path $path returned ${value.statusCode}")
-                                                       NotFound
-        case Left(value)                            => logger.error(s"github-raw of $repoName with path $path returned ${value.statusCode}: ${value.message}")
-                                                       InternalServerError
-      }
-    }
+    Action.async:
+      implicit request =>
+        for
+          response <- gitHubgitHubConnector.getGithubRawContent(repoName, path, request.queryString)
+        yield response match
+          case Right(value)                           => Ok(value.body)
+          case Left(value) if value.statusCode == 404 => logger.info(s"github-raw of $repoName with path $path returned ${value.statusCode}")
+                                                         NotFound
+          case Left(value)                            => logger.error(s"github-raw of $repoName with path $path returned ${value.statusCode}: ${value.message}")
+                                                         InternalServerError
 
   def githubRestUrl(repoName: String, path: String): Action[AnyContent] =
-    Action.async { implicit request =>
-      for {
-        response <- gitHubgitHubConnector.getGithubRestContent(repoName, path, request.queryString)
-      } yield response match {
-        case Right(value)                           => Ok(value.body)
-        case Left(value) if value.statusCode == 404 => logger.info(s"github-rest of $repoName with path $path returned ${value.statusCode}")
-                                                       NotFound
-        case Left(value)                            => logger.error(s"github-rest of $repoName with path $path returned ${value.statusCode}: ${value.message}")
-                                                       InternalServerError
-      }
-    }
-}
+    Action.async:
+      implicit request =>
+        for
+          response <- gitHubgitHubConnector.getGithubRestContent(repoName, path, request.queryString)
+        yield response match
+          case Right(value)                           => Ok(value.body)
+          case Left(value) if value.statusCode == 404 => logger.info(s"github-rest of $repoName with path $path returned ${value.statusCode}")
+                                                         NotFound
+          case Left(value)                            => logger.error(s"github-rest of $repoName with path $path returned ${value.statusCode}: ${value.message}")
+                                                         InternalServerError

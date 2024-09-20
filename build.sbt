@@ -2,7 +2,7 @@ import play.sbt.PlayImport.PlayKeys.playDefaultPort
 import uk.gov.hmrc.DefaultBuildSettings
 
 ThisBuild / majorVersion := 0
-ThisBuild / scalaVersion := "2.13.12"
+ThisBuild / scalaVersion := "3.3.3"
 
 lazy val microservice = Project("platops-github-proxy", file("."))
   .enablePlugins(play.sbt.PlayScala, SbtDistributablesPlugin)
@@ -10,7 +10,8 @@ lazy val microservice = Project("platops-github-proxy", file("."))
     libraryDependencies ++= AppDependencies.compile ++ AppDependencies.test,
     // https://www.scala-lang.org/2021/01/12/configuring-and-suppressing-warnings.html
     // suppress warnings in generated routes files
-    scalacOptions += "-Wconf:src=routes/.*:s",
+    // Disabled until implemented in a later Scala version
+    // scalacOptions += "-Wconf:src=routes/.*:s",
     playDefaultPort     := 8466,
   )
   .settings(resolvers += Resolver.jcenterRepo)

@@ -31,16 +31,13 @@ import scala.concurrent.{ExecutionContext, Future}
 class GitHubConnector @Inject()(
   httpClientV2: HttpClientV2,
   githubConfig: GitHubConfig
-)(implicit
-  ec          : ExecutionContext
-) {
+)(using ExecutionContext):
 
   def getGithubRawContent(
     repoName: String,
     path    : String,
     queryMap: Map[String, Seq[String]]
-  )(implicit
-    hc      : HeaderCarrier
+  )(using HeaderCarrier
   ): Future[Either[UpstreamErrorResponse, HttpResponse]] =
     getFromGithub(s"${githubConfig.rawUrl}/hmrc", repoName, path, queryMap)
 
@@ -48,8 +45,7 @@ class GitHubConnector @Inject()(
     repoName: String,
     path    : String,
     queryMap: Map[String, Seq[String]]
-  )(implicit
-    hc      : HeaderCarrier
+  )(using HeaderCarrier
   ): Future[Either[UpstreamErrorResponse, HttpResponse]] =
     getFromGithub(s"${githubConfig.restUrl}/repos/hmrc", repoName, path, queryMap)
 
@@ -58,31 +54,28 @@ class GitHubConnector @Inject()(
     repoName: String,
     path    : String,
     queryMap: Map[String, Seq[String]]
-  )(implicit
-    hc      : HeaderCarrier
+  )(using HeaderCarrier
   ): Future[Either[UpstreamErrorResponse, HttpResponse]] =
     httpClientV2
-      .get(new URL(s"$baseUrl/$repoName/$path${extractQueryParams(queryMap)}")) // Not using url interpolator since it doesn't escape the query params correctly
+      .get(URL(s"$baseUrl/$repoName/$path${extractQueryParams(queryMap)}")) // Not using url interpolator since it doesn't escape the query params correctly
       .setHeader("Authorization" -> s"token ${githubConfig.githubToken}")
       .withProxy
       .execute[Either[UpstreamErrorResponse, HttpResponse]]
 
   private def extractQueryParams(queryMap: Map[String, Seq[String]]): String =
-    if (queryMap.isEmpty) ""
+    if queryMap.isEmpty then ""
     else
       queryMap
         .map(entry => entry._1 + "=" + entry._2.mkString(","))
         .mkString("?", "&", "")
 
-  def getRateLimitMetrics(token: String, resource: RateLimitMetrics.Resource)(implicit hc: HeaderCarrier): Future[RateLimitMetrics] = {
-    implicit val rlmr = RateLimitMetrics.reads(resource)
+  def getRateLimitMetrics(token: String, resource: RateLimitMetrics.Resource)(using HeaderCarrier): Future[RateLimitMetrics] =
+    given Reads[RateLimitMetrics] = RateLimitMetrics.reads(resource)
     httpClientV2
       .get(url"${githubConfig.restUrl}/rate_limit")
       .setHeader("Authorization" -> s"token $token")
       .withProxy
       .execute[RateLimitMetrics]
-  }
-}
 
 case class RateLimitMetrics(
   limit    : Int,
@@ -90,17 +83,16 @@ case class RateLimitMetrics(
   reset    : Int
 )
 
-object RateLimitMetrics {
+object RateLimitMetrics:
 
-  sealed trait Resource {
-    def asString: String
-  }
+  enum Resource:
+    case Core, GraphQl
 
-  object Resource {
-    final case object Core    extends Resource { val asString = "core"    }
-    final case object GraphQl extends Resource { val asString = "graphql" }
-  }
-
+    def asString: String =
+      this match
+        case Core    => "core"
+        case GraphQl => "graphql"
+    
   def reads(resource: Resource): Reads[RateLimitMetrics] =
     Reads.at(__ \ "resources" \ resource.asString)(
       ( (__ \ "limit"    ).read[Int]
@@ -108,4 +100,3 @@ object RateLimitMetrics {
       ~ (__ \ "reset"    ).read[Int]
       )(RateLimitMetrics.apply _)
     )
-}

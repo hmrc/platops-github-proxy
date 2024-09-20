@@ -28,7 +28,7 @@ case class SchedulerConfig(
 , initialDelay: FiniteDuration
 )
 
-object SchedulerConfig {
+object SchedulerConfig:
   def apply(
     configuration  : Configuration
   , enabledKey     : String
@@ -41,15 +41,14 @@ object SchedulerConfig {
       , interval     = configuration.get[FiniteDuration](intervalKey)
       , initialDelay = configuration.get[FiniteDuration](initialDelayKey)
       )
-}
 
 @Singleton
-class SchedulerConfigs @Inject()(configuration: Configuration){
+class SchedulerConfigs @Inject()(configuration: Configuration):
 
-  val metrixScheduler = SchedulerConfig(
-      configuration
-    , enabledKey      = "scheduler.metrix.enabled"
-    , intervalKey     = "scheduler.metrix.interval"
-    , initialDelayKey = "scheduler.metrix.initialDelay"
+  val metrixScheduler: SchedulerConfig =
+    SchedulerConfig(
+        configuration
+      , enabledKey      = "scheduler.metrix.enabled"
+      , intervalKey     = "scheduler.metrix.interval"
+      , initialDelayKey = "scheduler.metrix.initialDelay"
     )
-}
