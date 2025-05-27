@@ -35,8 +35,8 @@ class GitHubConnector @Inject()(
   httpClientV2: HttpClientV2,
   githubConfig: GitHubConfig
 )(using
-  ec : ExecutionContext,
-  mat: Materializer
+  ExecutionContext,
+  Materializer
 ):
   import HttpReads.Implicits._
 
