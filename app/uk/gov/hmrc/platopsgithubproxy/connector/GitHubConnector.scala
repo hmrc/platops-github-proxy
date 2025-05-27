@@ -16,22 +16,29 @@
 
 package uk.gov.hmrc.platopsgithubproxy.connector
 
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.Source
+import org.apache.pekko.util.ByteString
 import play.api.libs.functional.syntax.toFunctionalBuilderOps
 import play.api.libs.json.{Reads, __}
-import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps, UpstreamErrorResponse}
+import uk.gov.hmrc.http.client.{HttpClientV2, readEitherSource}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, HttpResponse, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.platopsgithubproxy.config.GitHubConfig
 
 import java.net.URL
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration.DurationInt
 
 @Singleton
 class GitHubConnector @Inject()(
   httpClientV2: HttpClientV2,
   githubConfig: GitHubConfig
-)(using ExecutionContext):
+)(using
+  ec : ExecutionContext,
+  mat: Materializer
+):
+  import HttpReads.Implicits._
 
   def getGithubRawContent(
     repoName: String,
@@ -48,6 +55,18 @@ class GitHubConnector @Inject()(
   )(using HeaderCarrier
   ): Future[Either[UpstreamErrorResponse, HttpResponse]] =
     getFromGithub(s"${githubConfig.restUrl}/repos/hmrc", repoName, path, queryMap)
+
+  def getGithubZip(
+    repoName: String
+  )(using HeaderCarrier
+  ): Future[Either[UpstreamErrorResponse, Source[ByteString, _]]] =
+    val url = URL(s"${githubConfig.restUrl}/repos/hmrc/$repoName/zipball/HEAD")
+    httpClientV2
+      .get(url)
+      .setHeader("Authorization" -> s"token ${githubConfig.githubToken}")
+      .withProxy
+      .transform(_.withRequestTimeout(120.seconds))
+      .stream[Either[UpstreamErrorResponse, Source[ByteString, _]]]
 
   private def getFromGithub(
     baseUrl : String,
