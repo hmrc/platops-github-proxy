@@ -12,7 +12,6 @@ lazy val microservice = Project("platops-github-proxy", file("."))
     scalacOptions += "-Wconf:src=routes/.*:s",
     playDefaultPort     := 8466,
   )
-  .settings(resolvers += Resolver.jcenterRepo)
   .settings(CodeCoverageSettings.settings: _*)
 
 lazy val it = (project in file("it"))

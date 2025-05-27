@@ -57,10 +57,12 @@ class GitHubConnector @Inject()(
     getFromGithub(s"${githubConfig.restUrl}/repos/hmrc", repoName, path, queryMap)
 
   def getGithubZip(
-    repoName: String
+    repoName: String,
+    branch: Option[String] = None
   )(using HeaderCarrier
   ): Future[Either[UpstreamErrorResponse, Source[ByteString, _]]] =
-    val url = URL(s"${githubConfig.restUrl}/repos/hmrc/$repoName/zipball/HEAD")
+    val ref = branch.getOrElse("HEAD")
+    val url = URL(s"${githubConfig.restUrl}/repos/hmrc/$repoName/zipball/$ref")
     httpClientV2
       .get(url)
       .setHeader("Authorization" -> s"token ${githubConfig.githubToken}")

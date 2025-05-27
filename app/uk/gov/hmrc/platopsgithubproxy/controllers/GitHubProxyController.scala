@@ -59,11 +59,11 @@ class GitHubProxyController @Inject()(
           case Left(value)                            => logger.error(s"github-rest of $repoName with path $path returned ${value.statusCode}: ${value.message}")
                                                          InternalServerError
   
-  def githubZip(repoName: String): Action[AnyContent] =
+  def githubZip(repoName: String, branch: Option[String]): Action[AnyContent] =
     Action.async:
       implicit request =>
         for
-          response <- gitHubConnector.getGithubZip(repoName)
+          response <- gitHubConnector.getGithubZip(repoName, branch)
         yield response match
           case Right(source)                          => Ok.sendEntity(HttpEntity.Streamed(source, None, Some("application/zip")))
           case Left(value) if value.statusCode == 404 => logger.info(s"github-zip of $repoName returned ${value.statusCode}")
