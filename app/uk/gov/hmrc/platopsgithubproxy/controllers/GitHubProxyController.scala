@@ -16,7 +16,10 @@
 
 package uk.gov.hmrc.platopsgithubproxy.controllers
 
+import org.apache.pekko.stream.scaladsl.Source
+import org.apache.pekko.util.ByteString
 import play.api.Logging
+import play.api.http.HttpEntity
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.platopsgithubproxy.connector.GitHubConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -27,7 +30,7 @@ import scala.concurrent.ExecutionContext
 @Singleton
 class GitHubProxyController @Inject()(
   cc                   : ControllerComponents,
-  gitHubgitHubConnector: GitHubConnector,
+  gitHubConnector: GitHubConnector,
 )(using ExecutionContext
 ) extends BackendController(cc)
      with Logging:
@@ -36,7 +39,7 @@ class GitHubProxyController @Inject()(
     Action.async:
       implicit request =>
         for
-          response <- gitHubgitHubConnector.getGithubRawContent(repoName, path, request.queryString)
+          response <- gitHubConnector.getGithubRawContent(repoName, path, request.queryString)
         yield response match
           case Right(value)                           => Ok(value.body)
           case Left(value) if value.statusCode == 404 => logger.info(s"github-raw of $repoName with path $path returned ${value.statusCode}")
@@ -48,10 +51,22 @@ class GitHubProxyController @Inject()(
     Action.async:
       implicit request =>
         for
-          response <- gitHubgitHubConnector.getGithubRestContent(repoName, path, request.queryString)
+          response <- gitHubConnector.getGithubRestContent(repoName, path, request.queryString)
         yield response match
           case Right(value)                           => Ok(value.body)
           case Left(value) if value.statusCode == 404 => logger.info(s"github-rest of $repoName with path $path returned ${value.statusCode}")
                                                          NotFound
           case Left(value)                            => logger.error(s"github-rest of $repoName with path $path returned ${value.statusCode}: ${value.message}")
+                                                         InternalServerError
+  
+  def githubZip(repoName: String, branch: Option[String]): Action[AnyContent] =
+    Action.async:
+      implicit request =>
+        for
+          response <- gitHubConnector.getGithubZip(repoName, branch)
+        yield response match
+          case Right(source)                          => Ok.sendEntity(HttpEntity.Streamed(source, None, Some("application/zip")))
+          case Left(value) if value.statusCode == 404 => logger.info(s"github-zip of $repoName returned ${value.statusCode}")
+                                                         NotFound
+          case Left(value)                            => logger.error(s"github-zip of $repoName returned ${value.statusCode}: ${value.message}")
                                                          InternalServerError

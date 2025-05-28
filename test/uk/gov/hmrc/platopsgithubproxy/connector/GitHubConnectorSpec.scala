@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.platopsgithubproxy.connector
 
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.util.ByteString
 import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, equalTo, get, getRequestedFor, stubFor, urlEqualTo, urlPathEqualTo}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
@@ -34,6 +36,8 @@ class GitHubConnectorSpec
      with HttpClientV2Support
      with ScalaFutures
      with IntegrationPatience:
+
+  private given ActorSystem = ActorSystem()
 
   private val testToken = "test-token"
 
@@ -160,6 +164,55 @@ class GitHubConnectorSpec
         githubConnector
           .getGithubRestContent("service-one", "test", Map("query" -> Seq("test")))
           .futureValue
+
+      response.isLeft shouldBe true
+
+  "getGithubZip" should:
+
+    "return 200 with streaming response body" in:
+      val expectedBytes = "zip-content-bytes".getBytes("UTF-8")
+      stubFor(
+        get(urlEqualTo("/repos/hmrc/service-one/zipball/HEAD"))
+          .willReturn(aResponse().withStatus(200).withBody(expectedBytes))
+      )
+
+      val response = githubConnector
+        .getGithubZip("service-one")
+        .futureValue
+
+      response.isRight shouldBe true
+
+      val actualBytes = response match
+          case Right(source) => 
+            source
+              .runFold(ByteString.empty)(_ ++ _)
+              .futureValue
+              .toArray
+          case Left(_) => fail("Expected Right but got Left")
+
+      actualBytes shouldBe expectedBytes
+
+    "return 404 when repository not found in GitHub" in:
+      stubFor(
+        get(urlEqualTo("/repos/hmrc/service-one/zipball/HEAD"))
+          .willReturn(aResponse().withStatus(404))
+      )
+
+      val response = githubConnector
+        .getGithubZip("service-one")
+        .futureValue
+
+      response.isLeft shouldBe true
+
+    "return 401 when unauthenticated" in:
+      stubFor(
+        get(urlEqualTo("/repos/hmrc/service-one/zipball/HEAD"))
+          .willReturn(aResponse().withStatus(401))
+      )
+
+      val response = githubConnector
+        .getGithubZip("service-one")
+        .futureValue
 
       response.isLeft shouldBe true
 
