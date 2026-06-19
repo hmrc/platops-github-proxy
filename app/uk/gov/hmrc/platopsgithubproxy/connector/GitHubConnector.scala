@@ -97,6 +97,17 @@ class GitHubConnector @Inject()(
       .setHeader("Authorization" -> s"token $token")
       .withProxy
       .execute[RateLimitMetrics]
+  
+  def githubUsernameExists(username: String)(using HeaderCarrier): Future[Boolean] =
+    val url = java.net.URI(s"${githubConfig.webUrl}/$username").toURL
+    httpClientV2
+      .get(url)
+      .withProxy
+      .execute[Either[UpstreamErrorResponse, HttpResponse]]
+      .flatMap:
+        case Right(_)                                        => Future.successful(true)
+        case Left(UpstreamErrorResponse.WithStatusCode(404)) => Future.successful(false)
+        case Left(err)                                       => Future.failed(RuntimeException(s"Check github username exists for $url failed with upstream error: ${err.message}"))
 
 case class RateLimitMetrics(
   limit    : Int,
