@@ -20,6 +20,7 @@ import org.apache.pekko.stream.scaladsl.Source
 import org.apache.pekko.util.ByteString
 import play.api.Logging
 import play.api.http.HttpEntity
+import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.platopsgithubproxy.connector.GitHubConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -70,3 +71,10 @@ class GitHubProxyController @Inject()(
                                                          NotFound
           case Left(value)                            => logger.error(s"github-zip of $repoName returned ${value.statusCode}: ${value.message}")
                                                          InternalServerError
+
+  def githubUserExists(username: String): Action[AnyContent] =
+    Action.async:
+      implicit request =>
+        gitHubConnector.githubUsernameExists(username)
+          .map: exists =>
+            Ok(Json.obj("username" -> username, "exists" -> exists))

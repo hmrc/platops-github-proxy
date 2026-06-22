@@ -45,11 +45,12 @@ class GitHubConnectorSpec
     GitHubConnector(
       httpClientV2 = httpClientV2,
       githubConfig = GitHubConfig(Configuration(
-        "github.rest.api.url"      -> wireMockUrl,
-        "github.open.api.rawurl"   -> wireMockUrl,
-        "github.open.api.token"    -> testToken,
-        "ratemetrics.githubtokens" -> List(),
-        "metrics.jvm"              -> false
+        "github.rest.api.url"      -> wireMockUrl
+      , "github.open.api.rawurl"   -> wireMockUrl
+      , "github.open.api.token"    -> testToken
+      , "github.web.url"           -> wireMockUrl
+      , "ratemetrics.githubtokens" -> List()
+      , "metrics.jvm"              -> false
       ))
     )
 
@@ -307,3 +308,28 @@ class GitHubConnectorSpec
         getRequestedFor(urlPathEqualTo("/rate_limit"))
           .withHeader("Authorization", equalTo(s"token $testToken"))
       )
+
+  "githubUsernameExists" should:
+
+    val githubUser: String = "user-1"
+
+    "return true when github user exists (200)" in:
+      stubFor(
+        get(urlEqualTo(s"/users/$githubUser"))
+          .willReturn(aResponse().withStatus(200).withBody("""{"type" : "User"}"""))
+      )
+      githubConnector.githubUsernameExists(githubUser).futureValue shouldBe true
+
+    "return false when github user does not exist (404)" in:
+      stubFor(
+        get(urlEqualTo(s"/users/$githubUser"))
+          .willReturn(aResponse().withStatus(404))
+      )
+      githubConnector.githubUsernameExists(githubUser).futureValue shouldBe false
+
+    "fail when github returns an unexpected status (500)" in:
+      stubFor(
+        get(urlEqualTo(s"/users/$githubUser"))
+          .willReturn(aResponse().withStatus(500))
+      )
+      githubConnector.githubUsernameExists("user-1").failed.futureValue shouldBe a[RuntimeException]
