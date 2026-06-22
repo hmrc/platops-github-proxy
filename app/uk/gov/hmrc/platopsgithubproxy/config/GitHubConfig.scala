@@ -27,7 +27,6 @@ class GitHubConfig @Inject()(configuration: Configuration):
   val restUrl    : String = configuration.get[String]("github.rest.api.url")
   val rawUrl     : String = configuration.get[String]("github.open.api.rawurl")
   val githubToken: String = configuration.get[String]("github.open.api.token")
-  val webUrl     : String = configuration.get[String]("github.web.url")
 
   val tokens: List[(String, String)] =
     configuration.get[ConfigList]("ratemetrics.githubtokens").asScala.toList

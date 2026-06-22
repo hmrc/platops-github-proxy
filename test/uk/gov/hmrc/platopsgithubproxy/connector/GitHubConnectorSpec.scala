@@ -315,21 +315,21 @@ class GitHubConnectorSpec
 
     "return true when github user exists (200)" in:
       stubFor(
-        get(urlEqualTo(s"/$githubUser"))
-          .willReturn(aResponse().withStatus(200))
+        get(urlEqualTo(s"/users/$githubUser"))
+          .willReturn(aResponse().withStatus(200).withBody("""{"type" : "User"}"""))
       )
       githubConnector.githubUsernameExists(githubUser).futureValue shouldBe true
 
     "return false when github user does not exist (404)" in:
       stubFor(
-        get(urlEqualTo(s"/$githubUser"))
+        get(urlEqualTo(s"/users/$githubUser"))
           .willReturn(aResponse().withStatus(404))
       )
       githubConnector.githubUsernameExists(githubUser).futureValue shouldBe false
 
     "fail when github returns an unexpected status (500)" in:
       stubFor(
-        get(urlEqualTo(s"/$githubUser"))
+        get(urlEqualTo(s"/users/$githubUser"))
           .willReturn(aResponse().withStatus(500))
       )
       githubConnector.githubUsernameExists("user-1").failed.futureValue shouldBe a[RuntimeException]
